@@ -142,9 +142,9 @@ if __name__ == '__main__':
     # define your model
     max_length = model2maxlen[model_name]
     if args.e:
-        datasets = ["qasper", "QasperQAInstructLONGBENCH_short"]
+        datasets = ["QasperQAInstructLONGBENCH_short"]
     else:
-        datasets = ["qasper", "QasperQAInstructLONGBENCH_short"]
+        datasets = ["QasperQAInstructLONGBENCH_short"]
     # we design specific prompt format and max generation length for each task, feel free to modify them to optimize model output
     dataset2prompt = json.load(open("config/dataset2prompt.json", "r"))
     dataset2maxlen = json.load(open("config/dataset2maxlen.json", "r"))
