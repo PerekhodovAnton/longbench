@@ -91,7 +91,7 @@ def get_pred(rank, world_size, data, max_length, max_gen, prompt_format, dataset
         pred = tokenizer.decode(output[context_length:], skip_special_tokens=True)
         pred = post_process(pred, model_name)
         with open(out_path, "a", encoding="utf-8") as f:
-            json.dump({"pred": pred, "answers": json_obj["answers"], "all_classes": json_obj["all_classes"], "length": json_obj["length"]}, f, ensure_ascii=False)
+            json.dump({"pred_clust": pred, "answers": json_obj["answers"], "all_classes": json_obj["all_classes"], "length": json_obj["length"]}, f, ensure_ascii=False)
             f.write('\n')
     dist.destroy_process_group()
 
@@ -137,8 +137,10 @@ if __name__ == '__main__':
 
     model2path = json.load(open("config/model2path.json", "r"))
     model2maxlen = json.load(open("config/model2maxlen.json", "r"))
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model_name = args.model
+    device = torch.device('cuda')
+    
+    model_name = 'vicuna-v1.5-7b-16k'
+    print(f"model_name: {model_name}")
     # define your model
     max_length = model2maxlen[model_name]
     if args.e:
@@ -149,30 +151,35 @@ if __name__ == '__main__':
     dataset2prompt = json.load(open("config/dataset2prompt.json", "r"))
     dataset2maxlen = json.load(open("config/dataset2maxlen.json", "r"))
     # predict on each dataset
-    if not os.path.exists("pred"):
-        os.makedirs("pred")
-    if not os.path.exists("pred_e"):
-        os.makedirs("pred_e")
+    if not os.path.exists("pred_clust"):
+        os.makedirs("pred_clust")
+    if not os.path.exists("pred_clust_lole"):
+        os.makedirs("pred_clust_lole")
     for dataset in datasets:
         if args.e:
             data = load_dataset(f"Anper3004/{dataset}", split='train')
-            if not os.path.exists(f"pred_e/{model_name}"):
-                os.makedirs(f"pred_e/{model_name}")
-            out_path = f"pred_e/{model_name}/{dataset}.jsonl"
+            if not os.path.exists(f"pred_clust_lole/{model_name}"):
+                os.makedirs(f"pred_clust_lole/{model_name}")
+            out_path = f"pred_clust_lole/{model_name}/{dataset}.jsonl"
         else:
             data = load_dataset(f"Anper3004/{dataset}", split='train')
-            if not os.path.exists(f"pred/{model_name}"):
-                os.makedirs(f"pred/{model_name}")
-            out_path = f"pred/{model_name}/{dataset}.jsonl"
+            if not os.path.exists(f"pred_clust/{model_name}"):
+                os.makedirs(f"pred_clust/{model_name}")
+            out_path = f"pred_clust/{model_name}/{dataset}.jsonl"
+        print(f'{dataset}')
+        print(f'{out_path}')
         prompt_format = dataset2prompt[dataset]
         max_gen = dataset2maxlen[dataset]
         data_all = [data_sample for data_sample in data]
         data_subsets = [data_all[i::world_size] for i in range(world_size)]
         processes = []
+        print(world_size)
         for rank in range(world_size):
             p = mp.Process(target=get_pred, args=(rank, world_size, data_subsets[rank], max_length, \
                         max_gen, prompt_format, dataset, device, model_name, model2path, out_path))
             p.start()
+            print('p is started')
             processes.append(p)
         for p in processes:
             p.join()
+    print('all is done')
